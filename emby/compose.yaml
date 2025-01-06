@@ -1,0 +1,28 @@
+services:
+  emby:
+    image: lscr.io/linuxserver/emby:latest
+    container_name: emby
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Your_Timezone
+    volumes:
+      - /path/to/emby/config:/config
+      - /path/to/media/movies:/data/movies
+      - /path/to/media/series:/data/series
+    devices:
+      - /dev/dri:/dev/dri # For hardware acceleration
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.emby.entrypoints=websecure"
+      - "traefik.http.routers.emby.rule=Host(`your-emby-domain.com`)"
+      - "traefik.http.routers.emby.service=emby"
+      - "traefik.http.routers.emby.tls.certresolver=lets-encrypt"
+      - "traefik.http.services.emby.loadbalancer.server.port=8096"
+    networks:
+      - web
+
+networks:
+  web:
+    external: true

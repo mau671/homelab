@@ -1,0 +1,30 @@
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Your_Timezone
+      - DOCKER_MODS=ghcr.io/intro-skipper/intro-skipper-docker-mod # Optional
+      # - JELLYFIN_PublishedServerUrl=https://your-jellyfin-domain.com # Optional
+    volumes:
+      - /path/to/jellyfin/config:/config
+      - /path/to/media/movies:/data/movies
+      - /path/to/media/series:/data/series
+    devices:
+      - /dev/dri:/dev/dri # For hardware acceleration
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin.rule=Host(`your-jellyfin-domain.com`)"
+      - "traefik.http.routers.jellyfin.service=jellyfin"
+      - "traefik.http.routers.jellyfin.tls.certresolver=lets-encrypt"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
