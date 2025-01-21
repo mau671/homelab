@@ -1,0 +1,32 @@
+version: '3'
+services:
+  wireguard:
+    container_name: wireguard
+    image: linuxserver/wireguard:latest
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      # Change the values as needed:
+      - PUID=1000                  # System user ID
+      - PGID=1000                  # System group ID
+      - TZ=Europe/Madrid           # Timezone
+      - SERVERURL=YOUR_SERVER_URL  # Server IP address or domain (optional)
+      - SERVERPORT=51820           # WireGuard server port
+      - PEERS=4                    # Number of clients to generate (optional)
+      - PEERDNS=1.1.1.1,1.0.0.1    # DNS servers for clients (optional)
+      - INTERNAL_SUBNET=10.13.13.0 # Internal subnet for WireGuard (optional)
+      - ALLOWEDIPS=0.0.0.0/0       # Range of IPs allowed for traffic (optional)
+      - LOG_CONFS=true             # Enable configuration logs (optional)
+    ports:
+      # Map the necessary ports:
+      - "51820:51820/udp" # Change 51820 as per your configuration
+      - 32400:32400       # Optional: for Plex Media Server
+    volumes:
+      # Volume paths for data persistence:
+      - /path/to/wireguard/config:/config # Replace with your local path
+      - /lib/modules:/lib/modules         # Optional: for kernel modules
+    sysctls:
+      # Advanced network configuration:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped # Ensure the container restarts automatically

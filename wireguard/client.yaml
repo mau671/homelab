@@ -1,0 +1,50 @@
+version: '3.8'
+services:
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard
+    restart: always
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000           # System user ID
+      - PGID=1000           # System group ID
+      - TZ=Europe/Madrid    # Timezone
+    volumes:
+      - /home/docker/wireguard/config:/config
+      - /lib/modules:/lib/modules
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    networks:
+      plex:
+        ipv4_address: 172.20.0.2 # Static IP for WireGuard
+
+  plex:
+    container_name: plex
+    image: linuxserver/plex:latest
+    network_mode: "service:wireguard" # Route traffic through WireGuard
+    depends_on:
+      - wireguard
+    environment:
+      - TZ=Europe/Madrid
+      - PUID=1000
+      - PGID=1000
+      - VERSION=docker
+      - PLEX_CLAIM=claim-xLrSDBPz_Qen4coLgpd9 # Replace with your claim token
+    volumes:
+      - /home/docker/plex/config:/config
+      - /mnt/dropbox01:/mnt/dropbo01
+      - /mnt/dropbox02:/mnt/dropbo02
+      - /mnt/dropbox03:/mnt/dropbo03
+      - /mnt/dropbox04:/mnt/dropbox04
+    restart: always
+    devices:
+      - /dev/dri:/dev/dri
+    networks:
+      plex:
+        ipv4_address: 172.20.0.3 # Static IP for Plex
+
+networks:
+  plex:
+    external: true
