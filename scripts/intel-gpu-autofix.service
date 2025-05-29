@@ -1,0 +1,23 @@
+[Unit]
+Description=Intel GPU Container Auto-Fix Service
+Documentation=man:systemd.service(5)
+After=network.target pve-cluster.service
+Wants=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/intel-gpu-autofix.sh /etc/intel-gpu-containers.conf
+User=root
+StandardOutput=journal
+StandardError=journal
+TimeoutSec=300
+
+# Restart on failure (useful if GPU detection fails temporarily)
+Restart=on-failure
+RestartSec=30
+
+# Environment variables
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,33 @@
+# ===============================================================================
+# Configuration File for Intel GPU Container Auto-Fix
+# ===============================================================================
+# 
+# This file contains the list of LXC containers that use Intel GPU
+# and should be automatically configured when the GPU device path changes.
+#
+# Copy this file to /etc/intel-gpu-containers.conf and modify as needed.
+#
+# ===============================================================================
+
+# LXC container IDs that use Intel GPU (comma-separated list)
+# These containers will be automatically updated when Intel GPU device changes
+# Example: containers running Jellyfin, Emby, Plex with hardware transcoding
+CONTAINERS="101,102,104"
+
+# ===============================================================================
+# Usage Notes:
+# ===============================================================================
+#
+# 1. Only include containers that actually use Intel GPU for hardware acceleration
+# 2. Make sure these containers exist in your Proxmox VE environment
+# 3. The script will automatically detect the correct Intel GPU device path
+# 4. Containers will be restarted automatically after configuration update
+# 5. Backups are created before making any configuration changes
+#
+# Common use cases:
+# - Media servers (Jellyfin, Emby, Plex) with hardware transcoding
+# - Video processing containers
+# - AI/ML workloads using Intel GPU
+# - Any container requiring /dev/dri/cardX access
+#
+# ===============================================================================
