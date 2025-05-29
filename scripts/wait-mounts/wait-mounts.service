@@ -1,0 +1,23 @@
+[Unit]
+Description=Wait for Mount Points Service
+Documentation=man:systemd.service(5)
+After=local-fs.target remote-fs.target
+Wants=local-fs.target remote-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wait-mounts.sh --config /etc/wait-mounts.conf --daemon
+User=root
+StandardOutput=journal
+StandardError=journal
+TimeoutSec=600
+
+# Restart on failure (useful if mount detection fails temporarily)
+Restart=on-failure
+RestartSec=15
+
+# Environment variables
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target
