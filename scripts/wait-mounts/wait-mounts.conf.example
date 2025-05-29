@@ -10,10 +10,15 @@
 #
 # ===============================================================================
 
-# Mount points to monitor (comma-separated list)
+# Mount points to monitor (supports two formats)
 # These are the mount points that containers depend on
 # Examples: NFS mounts, CIFS shares, USB drives, etc.
-MOUNT_POINTS="/mnt/server,/mnt/onedrive,/mnt/backup"
+
+# Format 1: Bash array syntax (recommended for paths with spaces)
+MOUNT_POINTS=("/mnt/server" "/mnt/onedrive" "/mnt/backup")
+
+# Format 2: Comma-separated list (legacy format, still supported)
+# MOUNT_POINTS="/mnt/server,/mnt/onedrive,/mnt/backup"
 
 # LXC container IDs to manage (comma-separated list)
 # These containers will be restarted when all mounts become available

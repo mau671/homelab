@@ -332,24 +332,45 @@ load_config_file() {
         [[ "$key" =~ ^[[:space:]]*# ]] && continue
         [[ -z "$key" ]] && continue
         
-        # Remove quotes and whitespace
+        # Clean the key (remove whitespace)
         key=$(echo "$key" | tr -d ' ')
-        value=$(echo "$value" | sed 's/^["'\'']//' | sed 's/["'\'']$//')
         
         case "$key" in
             MOUNT_POINTS)
-                IFS=',' read -ra MOUNT_POINTS <<< "$value"
+                # Handle both array syntax and comma-separated values
+                if [[ "$value" =~ ^\(.*\)$ ]]; then
+                    # Array syntax: MOUNT_POINTS=("/path1" "/path2")
+                    # Remove parentheses and extract quoted values
+                    value=${value#(}  # Remove leading (
+                    value=${value%)}  # Remove trailing )
+                    # Parse quoted strings in the array
+                    local temp_array=()
+                    while [[ $value =~ \"([^\"]+)\" ]]; do
+                        temp_array+=("${BASH_REMATCH[1]}")
+                        value=${value#*\"${BASH_REMATCH[1]}\"}
+                    done
+                    MOUNT_POINTS=("${temp_array[@]}")
+                else
+                    # Comma-separated syntax: MOUNT_POINTS="/path1,/path2"
+                    value=$(echo "$value" | sed 's/^["'\'']//' | sed 's/["'\'']$//')
+                    IFS=',' read -ra MOUNT_POINTS <<< "$value"
+                fi
                 ;;
             CONTAINERS)
+                # Clean quotes for containers (comma-separated only)
+                value=$(echo "$value" | sed 's/^["'\'']//' | sed 's/["'\'']$//')
                 IFS=',' read -ra CONTAINERS <<< "$value"
                 ;;
             TIMEOUT)
+                value=$(echo "$value" | sed 's/^["'\'']//' | sed 's/["'\'']$//')
                 TIMEOUT="$value"
                 ;;
             CHECK_INTERVAL)
+                value=$(echo "$value" | sed 's/^["'\'']//' | sed 's/["'\'']$//')
                 CHECK_INTERVAL="$value"
                 ;;
             LOG_PATH)
+                value=$(echo "$value" | sed 's/^["'\'']//' | sed 's/["'\'']$//')
                 LOG_PATH="$value"
                 ;;
         esac
