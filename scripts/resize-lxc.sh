@@ -81,7 +81,7 @@ print_step() {
 }
 
 print_prompt() {
-    echo -e "${CYAN}📝 [INPUT]${NC} $1"
+    printf "${CYAN}📝 [INPUT]${NC} $1 "
 }
 
 # Display script header
