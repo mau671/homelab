@@ -202,6 +202,15 @@ install_utilities() {
         ((installed_count++))
     fi
     
+    # Install GPU drivers script
+    if [[ -x "$utilities_dir/install-gpu-drivers.sh" ]]; then
+        print_step "Installing GPU drivers installer..."
+        cp "$utilities_dir/install-gpu-drivers.sh" "/usr/local/bin/"
+        chmod 755 "/usr/local/bin/install-gpu-drivers.sh"
+        print_success "GPU drivers installer available at /usr/local/bin/"
+        ((installed_count++))
+    fi
+    
     if [[ $installed_count -gt 0 ]]; then
         print_success "Utility scripts collection installed successfully"
     else
@@ -287,13 +296,16 @@ show_summary() {
         print_info "   • Manual: sudo resize-lxc.sh"
     fi
     
-    if [[ -f "/usr/local/bin/btop" || -f "/usr/local/bin/install-wireguard-lxc.sh" ]]; then
+    if [[ -f "/usr/local/bin/btop" || -f "/usr/local/bin/install-wireguard-lxc.sh" || -f "/usr/local/bin/install-gpu-drivers.sh" ]]; then
         print_info "✅ Utility Scripts Collection"
         if [[ -f "/usr/local/bin/btop" ]]; then
             print_info "   • Monitor: btop"
         fi
         if [[ -f "/usr/local/bin/install-wireguard-lxc.sh" ]]; then
             print_info "   • WireGuard: sudo install-wireguard-lxc.sh"
+        fi
+        if [[ -f "/usr/local/bin/install-gpu-drivers.sh" ]]; then
+            print_info "   • GPU Drivers: sudo install-gpu-drivers.sh"
         fi
     fi
     

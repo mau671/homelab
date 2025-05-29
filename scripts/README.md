@@ -37,7 +37,9 @@ Herramientas para administración avanzada de contenedores LXC:
 
 ### 🛠️ Utilities
 Colección de herramientas de instalación y configuración:
-- **Instaladores automatizados** (btop, WireGuard, etc.)
+- **Instaladores automatizados** (btop, WireGuard, GPU drivers, etc.)
+- **Detección automática** de hardware y sistema operativo
+- **Soporte multi-distribución** (Ubuntu/Debian)
 - **Configuraciones optimizadas** para homelab
 - **Verificación de integridad** y dependencias
 
@@ -76,6 +78,7 @@ sudo ./resize-lxc.sh
 cd utilities/
 sudo ./install-btop.sh
 sudo ./install-wireguard-lxc.sh
+sudo ./install-gpu-drivers.sh
 ```
 
 ## ✨ Características Comunes
