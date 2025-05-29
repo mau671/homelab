@@ -1,0 +1,58 @@
+# ===============================================================================
+# Example Configuration File for wait-mounts.sh
+# ===============================================================================
+# 
+# This file contains configuration options for the LXC Container Mount
+# Dependency Manager script. Copy this file and modify it according to
+# your environment requirements.
+#
+# Usage: sudo bash wait-mounts.sh --config /path/to/your/config.conf
+#
+# ===============================================================================
+
+# Mount points to monitor (comma-separated list)
+# These are the mount points that containers depend on
+# Examples: NFS mounts, CIFS shares, USB drives, etc.
+MOUNT_POINTS="/mnt/server,/mnt/onedrive,/mnt/backup"
+
+# LXC container IDs to manage (comma-separated list)
+# These containers will be restarted when all mounts become available
+CONTAINERS="101,102,104,105"
+
+# Maximum time to wait for mounts (in seconds)
+# After this timeout, the script will either exit (interactive) or restart the cycle (daemon)
+TIMEOUT=300
+
+# Interval between mount checks (in seconds)
+# How often to check if mounts are available during the waiting phase
+CHECK_INTERVAL=5
+
+# Log file path
+# Where to store detailed logs of the script's operations
+LOG_PATH="/var/log/wait-mounts.log"
+
+# ===============================================================================
+# Additional Notes:
+# ===============================================================================
+#
+# 1. All paths should be absolute (starting with /)
+# 2. Container IDs must exist in your Proxmox VE environment
+# 3. Mount point directories should exist even if not mounted
+# 4. The script must be run with root privileges
+# 5. For systemd service usage, use daemon mode: --daemon
+#
+# Example systemd service file:
+# [Unit]
+# Description=LXC Mount Dependency Manager
+# After=network.target
+# 
+# [Service]
+# Type=simple
+# ExecStart=/path/to/wait-mounts.sh --config /etc/wait-mounts.conf --daemon
+# Restart=always
+# RestartSec=10
+# 
+# [Install]
+# WantedBy=multi-user.target
+#
+# ===============================================================================
