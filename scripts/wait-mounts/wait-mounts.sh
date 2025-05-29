@@ -68,27 +68,39 @@ INTERACTIVE_MODE=true
 
 # Print colored messages with different levels
 print_info() {
-    echo -e "${BLUE}ℹ️  [INFO]${NC} $1"
+    if [[ "$DAEMON_MODE" == false ]]; then
+        echo -e "${BLUE}ℹ️  [INFO]${NC} $1"
+    fi
 }
 
 print_success() {
-    echo -e "${GREEN}✅ [SUCCESS]${NC} $1"
+    if [[ "$DAEMON_MODE" == false ]]; then
+        echo -e "${GREEN}✅ [SUCCESS]${NC} $1"
+    fi
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠️  [WARNING]${NC} $1"
+    if [[ "$DAEMON_MODE" == false ]]; then
+        echo -e "${YELLOW}⚠️  [WARNING]${NC} $1"
+    fi
 }
 
 print_error() {
-    echo -e "${RED}❌ [ERROR]${NC} $1" >&2
+    if [[ "$DAEMON_MODE" == false ]]; then
+        echo -e "${RED}❌ [ERROR]${NC} $1" >&2
+    fi
 }
 
 print_step() {
-    echo -e "${MAGENTA}🔧 [STEP]${NC} $1"
+    if [[ "$DAEMON_MODE" == false ]]; then
+        echo -e "${MAGENTA}🔧 [STEP]${NC} $1"
+    fi
 }
 
 print_prompt() {
-    printf "${CYAN}📝 [INPUT]${NC} $1 "
+    if [[ "$DAEMON_MODE" == false ]]; then
+        printf "${CYAN}📝 [INPUT]${NC} $1 "
+    fi
 }
 
 # Display script header
@@ -110,7 +122,14 @@ get_timestamp() {
 # Log message to both console and file
 log_message() {
     local message="[$(get_timestamp)] $1"
-    echo "$message" | tee -a "$LOG_PATH"
+    
+    # Always log to file
+    echo "$message" >> "$LOG_PATH"
+    
+    # Only output to console in non-daemon mode
+    if [[ "$DAEMON_MODE" == false ]]; then
+        echo "$message"
+    fi
 }
 
 # Cleanup function for graceful shutdown
@@ -118,9 +137,11 @@ cleanup() {
     local exit_code=$?
     if [[ $exit_code -ne 0 ]]; then
         print_error "Script terminated with exit code $exit_code"
-        log_message "ERROR: Script terminated unexpectedly"
+        log_message "ERROR: Script terminated unexpectedly with exit code $exit_code"
     else
-        print_success "Script completed successfully"
+        if [[ "$DAEMON_MODE" == false ]]; then
+            print_success "Script completed successfully"
+        fi
         log_message "INFO: Script completed successfully"
     fi
     exit $exit_code
@@ -675,6 +696,9 @@ continuous_monitor() {
     print_info "Continuous monitoring active - checking every 60 seconds"
     log_message "INFO: Continuous monitoring activated"
     
+    local last_log_time=$(date +%s)
+    local log_interval=600  # Log every 10 minutes
+    
     while true; do
         sleep 60
         
@@ -690,8 +714,10 @@ continuous_monitor() {
         fi
         
         # Periodic status log (every 10 minutes)
-        if [[ $((SECONDS % 600)) -eq 0 ]]; then
+        local current_time=$(date +%s)
+        if [[ $((current_time - last_log_time)) -ge $log_interval ]]; then
             log_message "INFO: Continuous monitoring - all mounts active"
+            last_log_time=$current_time
         fi
     done
 }
@@ -702,10 +728,13 @@ continuous_monitor() {
 
 # Main function that orchestrates the monitoring process
 main() {
-    show_header
-    
-    # Parse command line arguments
+    # Parse command line arguments first
     parse_arguments "$@"
+    
+    # Show header only in interactive mode
+    if [[ "$DAEMON_MODE" == false ]]; then
+        show_header
+    fi
     
     # Load configuration from file if specified
     if [[ -n "$CONFIG_FILE" ]]; then
@@ -753,11 +782,13 @@ main() {
         fi
     done
     
-    # Show configuration
-    show_configuration
+    # Show configuration only in interactive mode
+    if [[ "$DAEMON_MODE" == false ]]; then
+        show_configuration
+    fi
     
-    # Confirmation prompt for interactive mode
-    if [[ "$INTERACTIVE_MODE" == true ]]; then
+    # Confirmation prompt for interactive mode only
+    if [[ "$INTERACTIVE_MODE" == true && "$DAEMON_MODE" == false ]]; then
         echo ""
         print_warning "⚠️  IMPORTANT NOTICE ⚠️"
         print_warning "This script will monitor mount points and restart containers automatically"

@@ -259,11 +259,28 @@ enable_service() {
     
     if [[ "$run_choice" =~ ^[Yy]$ ]]; then
         print_step "Running service test..."
+        
+        # Stop service if it's already running
+        systemctl stop wait-mounts.service 2>/dev/null || true
+        
+        # Start the service
         if systemctl start wait-mounts.service; then
-            print_success "Service test completed successfully"
-            print_info "Check logs with: journalctl -u wait-mounts.service"
+            sleep 3  # Give service time to start
+            
+            # Check if service is active
+            if systemctl is-active --quiet wait-mounts.service; then
+                print_success "Service started successfully and is running"
+                print_info "Service status:"
+                systemctl status wait-mounts.service --no-pager -l
+                echo ""
+                print_info "Recent logs:"
+                journalctl -u wait-mounts.service --no-pager -l -n 10
+            else
+                print_warning "Service failed to start or stopped unexpectedly"
+                print_info "Check logs with: journalctl -u wait-mounts.service"
+            fi
         else
-            print_warning "Service test failed"
+            print_warning "Service failed to start"
             print_info "Check logs with: journalctl -u wait-mounts.service"
         fi
     fi

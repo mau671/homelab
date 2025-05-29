@@ -5,15 +5,16 @@ After=local-fs.target remote-fs.target
 Wants=local-fs.target remote-fs.target
 
 [Service]
-Type=oneshot
+Type=simple
 ExecStart=/usr/local/bin/wait-mounts.sh --config /etc/wait-mounts.conf --daemon
 User=root
 StandardOutput=journal
 StandardError=journal
-TimeoutSec=600
+TimeoutStartSec=30
+TimeoutStopSec=30
 
 # Restart on failure (useful if mount detection fails temporarily)
-Restart=on-failure
+Restart=always
 RestartSec=15
 
 # Environment variables
