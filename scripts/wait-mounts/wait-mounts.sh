@@ -494,7 +494,7 @@ stop_container_safely() {
     print_step "Stopping container $ctid..."
     log_message "INFO: Stopping container $ctid"
     
-    if ! pct stop "$ctid" --timeout 30 2>/dev/null; then
+    if ! pct stop "$ctid" 2>/dev/null; then
         print_warning "Failed to stop container $ctid gracefully, attempting force stop..."
         log_message "WARNING: Failed to stop container $ctid gracefully"
         
