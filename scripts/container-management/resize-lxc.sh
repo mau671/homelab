@@ -15,6 +15,7 @@
 # Features:
 # - Support for privileged and unprivileged containers
 # - Multiple LVM volume group support (auto-detection)
+# - Automatic logical volume activation (for stopped containers)
 # - Multiple filesystem support (ext2/3/4, XFS)
 # - Automatic container state management
 # - Color-coded output for better readability
@@ -206,11 +207,10 @@ get_container_info() {
     # Detect which LVM contains the container disk
     detect_container_lvm "$ctid"
     
-    # Set disk and volume paths using detected LVM
+    # Set disk name (VOL is already set by detect_container_lvm)
     DISK="vm-${ctid}-disk-0"
-    VOL="/dev/${LVM_NAME}/${DISK}"
     
-    # Volume existence is already verified in detect_container_lvm()
+    # Volume existence and path are already verified in detect_container_lvm()
     
     # Check if container is privileged
     if pct config "$ctid" | grep -q "unprivileged.*0" || ! pct config "$ctid" | grep -q "unprivileged"; then
@@ -439,6 +439,31 @@ verify_resize() {
 # LVM DETECTION FUNCTIONS
 #===============================================================================
 
+# Activate logical volume if needed
+activate_logical_volume() {
+    local vg="$1"
+    local lv="$2"
+    
+    print_step "Ensuring logical volume is active..."
+    
+    # Check if LV is active
+    local lv_active
+    lv_active=$(lvs --noheadings -o lv_active "${vg}/${lv}" 2>/dev/null | tr -d ' ')
+    
+    if [[ "$lv_active" != "active" ]]; then
+        print_info "Logical volume is not active, activating..."
+        if ! lvchange -ay "${vg}/${lv}"; then
+            print_error "Failed to activate logical volume ${vg}/${lv}"
+            return 1
+        fi
+        print_success "Logical volume activated successfully"
+    else
+        print_info "Logical volume is already active"
+    fi
+    
+    return 0
+}
+
 # Detect which LVM contains the container disk
 detect_container_lvm() {
     local ctid="$1"
@@ -453,15 +478,38 @@ detect_container_lvm() {
         exit 1
     fi
     
-    # Check each volume group for the container disk
+    # Check each volume group for the container disk using LVM commands
     while IFS= read -r vg; do
         vg=$(echo "$vg" | tr -d ' ')  # Remove whitespace
-        local potential_vol="/dev/${vg}/${disk_name}"
         
-        if [[ -e "$potential_vol" ]]; then
+        # Check if the logical volume exists in this volume group
+        if lvs "${vg}/${disk_name}" &>/dev/null; then
             LVM_NAME="$vg"
             print_success "Found container disk in LVM: $vg"
-            print_info "Disk path: $potential_vol"
+            
+            # Activate the logical volume if needed
+            if ! activate_logical_volume "$vg" "$disk_name"; then
+                continue  # Try next VG if activation fails
+            fi
+            
+            # Try different device path formats
+            local potential_paths=(
+                "/dev/${vg}/${disk_name}"
+                "/dev/mapper/${vg}-${disk_name//-/--}"
+                "/dev/mapper/${vg//\-/--}-${disk_name//-/--}"
+            )
+            
+            for path in "${potential_paths[@]}"; do
+                if [[ -e "$path" ]]; then
+                    print_info "Device path: $path"
+                    VOL="$path"
+                    return 0
+                fi
+            done
+            
+            # If LV exists and is active but no device file found, use default path
+            print_warning "Device file not found, using default path"
+            VOL="/dev/${vg}/${disk_name}"
             return 0
         fi
     done <<< "$vgs"
