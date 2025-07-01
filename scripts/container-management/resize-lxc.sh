@@ -4,8 +4,8 @@
 # LXC Container Disk Resize Script for Proxmox
 #===============================================================================
 # Description: Automated disk resizing tool for LXC containers in Proxmox VE
-# Author: System Administrator
-# Version: 2.0
+# Author: Mauricio González Prendas
+# Version: 2.1
 # License: MIT
 # 
 # This script safely resizes LXC container disks in Proxmox VE environment.
@@ -14,6 +14,7 @@
 #
 # Features:
 # - Support for privileged and unprivileged containers
+# - Multiple LVM volume group support (auto-detection)
 # - Multiple filesystem support (ext2/3/4, XFS)
 # - Automatic container state management
 # - Color-coded output for better readability
@@ -42,7 +43,6 @@ readonly NC='\033[0m' # No Color
 
 # Constants
 readonly SCRIPT_NAME="$(basename "$0")"
-readonly PVE_STORAGE_PATH="/dev/pve"
 readonly SUPPORTED_FS_TYPES=("ext2" "ext3" "ext4" "xfs")
 
 # Global variables
@@ -54,6 +54,7 @@ PRIVILEGED=false
 RUNNING=false
 FS_TYPE=""
 ORIGINAL_SIZE=""
+LVM_NAME=""
 
 #===============================================================================
 # UTILITY FUNCTIONS
@@ -202,16 +203,14 @@ get_container_info() {
     
     print_step "Gathering container information..."
     
-    # Set disk and volume paths
-    DISK="vm-${ctid}-disk-0"
-    VOL="${PVE_STORAGE_PATH}/${DISK}"
+    # Detect which LVM contains the container disk
+    detect_container_lvm "$ctid"
     
-    # Check if volume exists
-    if [[ ! -e "$VOL" ]]; then
-        print_error "Container disk not found: $VOL"
-        print_info "This might be a container with custom storage configuration"
-        exit 1
-    fi
+    # Set disk and volume paths using detected LVM
+    DISK="vm-${ctid}-disk-0"
+    VOL="/dev/${LVM_NAME}/${DISK}"
+    
+    # Volume existence is already verified in detect_container_lvm()
     
     # Check if container is privileged
     if pct config "$ctid" | grep -q "unprivileged.*0" || ! pct config "$ctid" | grep -q "unprivileged"; then
@@ -230,6 +229,7 @@ get_container_info() {
     ORIGINAL_SIZE=$(lvs --noheadings --units g --nosuffix -o lv_size "$VOL" 2>/dev/null | tr -d ' ' || echo "unknown")
     
     print_info "Container ID: $ctid"
+    print_info "LVM Volume Group: $LVM_NAME"
     print_info "Container Type: $([ "$PRIVILEGED" == true ] && echo "Privileged" || echo "Unprivileged")"
     print_info "Current Status: $([ "$RUNNING" == true ] && echo "Running" || echo "Stopped")"
     print_info "Disk Path: $VOL"
@@ -436,6 +436,60 @@ verify_resize() {
 }
 
 #===============================================================================
+# LVM DETECTION FUNCTIONS
+#===============================================================================
+
+# Detect which LVM contains the container disk
+detect_container_lvm() {
+    local ctid="$1"
+    local disk_name="vm-${ctid}-disk-0"
+    
+    print_step "Detecting LVM for container $ctid..."
+    
+    # Get list of all volume groups
+    local vgs
+    if ! vgs=$(vgs --noheadings -o vg_name 2>/dev/null); then
+        print_error "Failed to list volume groups"
+        exit 1
+    fi
+    
+    # Check each volume group for the container disk
+    while IFS= read -r vg; do
+        vg=$(echo "$vg" | tr -d ' ')  # Remove whitespace
+        local potential_vol="/dev/${vg}/${disk_name}"
+        
+        if [[ -e "$potential_vol" ]]; then
+            LVM_NAME="$vg"
+            print_success "Found container disk in LVM: $vg"
+            print_info "Disk path: $potential_vol"
+            return 0
+        fi
+    done <<< "$vgs"
+    
+    print_error "Container disk not found in any LVM"
+    print_info "Searched for: $disk_name"
+    print_info "Available LVMs:"
+    
+    # Show available LVMs for debugging
+    while IFS= read -r vg; do
+        vg=$(echo "$vg" | tr -d ' ')
+        print_info "  - $vg"
+        
+        # List LVs in this VG that might be container disks
+        local container_lvs
+        if container_lvs=$(lvs --noheadings -o lv_name "$vg" 2>/dev/null | grep "vm-.*-disk"); then
+            print_info "    Container disks in $vg:"
+            while IFS= read -r lv; do
+                lv=$(echo "$lv" | tr -d ' ')
+                print_info "      - $lv"
+            done <<< "$container_lvs"
+        fi
+    done <<< "$vgs"
+    
+    exit 1
+}
+
+#===============================================================================
 # MAIN EXECUTION FUNCTION
 #===============================================================================
 
@@ -454,6 +508,7 @@ main() {
     print_info "Current configuration summary:"
     print_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     print_info "Container ID: $CTID"
+    print_info "LVM Volume Group: $LVM_NAME"
     print_info "Container Type: $([ "$PRIVILEGED" == true ] && echo "Privileged" || echo "Unprivileged")"
     print_info "Current Status: $([ "$RUNNING" == true ] && echo "Running" || echo "Stopped")"
     print_info "Current Size: ${ORIGINAL_SIZE}G"
