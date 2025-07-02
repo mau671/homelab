@@ -224,7 +224,7 @@ install_packages() {
     print_step "Installing WireGuard and dependencies..."
     
     # Install required packages
-    local packages=("wireguard" "openresolv" "resolvconf" "iptables")
+    local packages=("wireguard" "openresolv" "iptables")
     
     if ! apt install -y "${packages[@]}"; then
         print_error "Failed to install required packages"
